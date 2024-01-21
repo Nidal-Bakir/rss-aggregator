@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Nidal-Bakir/rss-aggregator/internal/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -19,7 +21,13 @@ func startServer() {
 	readAndSetEnv(".env")
 
 	port, _ := os.LookupEnv("PORT")
-	router := setUpRouter()
+	if port == "" {
+		log.Fatal("con not find the port in hte env")
+	}
+
+	apiConfig := setupDatabase()
+
+	router := setUpRouter(apiConfig)
 	server := &http.Server{Handler: router, Addr: ":" + port}
 
 	fmt.Println("Starting the server on Port:", port)
@@ -29,7 +37,7 @@ func startServer() {
 	}
 }
 
-func setUpRouter() (router *chi.Mux) {
+func setUpRouter(apiConfig apiConfig) (router *chi.Mux) {
 	router = chi.NewRouter()
 
 	logger := httplog.NewLogger("rss-agg", httplog.Options{
@@ -58,7 +66,27 @@ func setUpRouter() (router *chi.Mux) {
 	// surely you should not use this!!!
 	router.Use(cors.AllowAll().Handler)
 
-	router.Mount("/v1", initV1Router())
+	router.Mount("/v1", initV1Router(apiConfig))
 
 	return router
+}
+
+type apiConfig struct {
+	DB *database.Queries
+}
+
+func setupDatabase() apiConfig {
+	dbUrl, _ := os.LookupEnv("DB_URL")
+	if dbUrl == "" {
+		log.Fatal("con not find the DB_URL in hte env")
+	}
+
+	db, err := sql.Open("postgres", dbUrl)
+
+	if err != nil {
+		log.Fatal("can not open the database connection", err)
+	}
+
+	return apiConfig{DB: database.New(db)}
+
 }
