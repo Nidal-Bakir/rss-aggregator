@@ -8,9 +8,9 @@ import (
 
 const ContentTypeJSON = "application/json"
 
-func responseWithError(w http.ResponseWriter, code int, msg string) {
+func responseWithError(w http.ResponseWriter, code int, msg string, err error) {
 	if code > 499 {
-		fmt.Printf("Internal server Error. Code:%d , Message: %s", code, msg)
+		fmt.Printf("Internal server Error. Code:%d , Message: %s, Error: %v", code, msg, err)
 	}
 
 	errorJson := struct {

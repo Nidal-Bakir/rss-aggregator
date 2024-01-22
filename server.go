@@ -15,11 +15,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httplog/v2"
+	_ "github.com/lib/pq"
 )
 
 func startServer() {
 	readAndSetEnv(".env")
-
+	
 	port, _ := os.LookupEnv("PORT")
 	if port == "" {
 		log.Fatal("con not find the port in hte env")
@@ -30,7 +31,7 @@ func startServer() {
 	router := setUpRouter(apiConfig)
 	server := &http.Server{Handler: router, Addr: ":" + port}
 
-	fmt.Println("Starting the server on Port:", port)
+	fmt.Printf("Starting the server on %s", server.Addr)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalln("Error while starting the server", err)
@@ -84,7 +85,7 @@ func setupDatabase() apiConfig {
 	db, err := sql.Open("postgres", dbUrl)
 
 	if err != nil {
-		log.Fatal("can not open the database connection", err)
+		log.Fatal("can not open the database connection: ", err)
 	}
 
 	return apiConfig{DB: database.New(db)}
