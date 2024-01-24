@@ -102,3 +102,55 @@ func (apiConfig *apiConfig) CreateFeedHandler(w http.ResponseWriter, r *http.Req
 
 	responseWithJson(w, 201, toFeedModel(dbFeed))
 }
+
+func (apiConfig *apiConfig) GetAllFeeds(w http.ResponseWriter, r *http.Request) {
+	dbFeeds, err := apiConfig.DB.GetAllFeeds(r.Context())
+
+	if err != nil {
+		responseWithError(w, 500, "Can not get the rss feeds,", err)
+		return
+	}
+
+	publicFeeds := make([]PublicFeedModel, len(dbFeeds))
+
+	for i, v := range dbFeeds {
+		publicFeeds[i] = PublicFeedModel{
+			ID:        v.ID,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
+			Name:      v.Name,
+			Url:       v.Url,
+		}
+	}
+
+	responseWithJson(w, 200, publicFeeds)
+}
+
+func (apiConfig *apiConfig) FollowFeedHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+	type followFeedParams struct {
+		FeedId uuid.UUID `json:"feed_id"`
+	}
+
+	var reqParams followFeedParams
+	err := json.NewDecoder(r.Body).Decode(&reqParams)
+	if err != nil {
+		responseWithError(w, 400, "malformed json", err)
+		return
+	}
+
+	err = apiConfig.DB.FollowFeed(r.Context(),
+		database.FollowFeedParams{
+			ID:     uuid.New(),
+			UserID: dbUser.ID,
+			FeedID: reqParams.FeedId,
+		})
+
+	if err != nil {
+		responseWithError(w, 500, "Can follow feed,", err)
+		return
+	}
+
+	responseWithJson(w, 201, struct {
+		Message string `json:"message"`
+	}{Message: "Done!"})
+}
