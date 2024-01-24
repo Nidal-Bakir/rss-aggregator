@@ -43,7 +43,7 @@ func setUpRouter(apiConfig apiConfig) (router *chi.Mux) {
 
 	logger := httplog.NewLogger("rss-agg", httplog.Options{
 		LogLevel:         slog.LevelDebug,
-		Concise:          true,
+		Concise:          false,
 		RequestHeaders:   true,
 		MessageFieldName: "message",
 		Tags: map[string]string{

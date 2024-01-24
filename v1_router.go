@@ -7,7 +7,8 @@ func initV1Router(apiConfig apiConfig) (v1Router *chi.Mux) {
 
 	r.Get("/err", errEndpointHandler)
 	r.Post("/users", apiConfig.createUserHandler)
-	r.Get("/me", apiConfig.GetUserByApiKeyHandler)
+	r.Get("/me", apiConfig.authMiddleware(apiConfig.GetUserByApiKeyHandler))
+	r.Post("/feed", apiConfig.authMiddleware(apiConfig.CreateFeedHandler))
 
 	return r
 }

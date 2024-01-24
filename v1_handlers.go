@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"net/http"
 	"time"
 
 	"github.com/Nidal-Bakir/rss-aggregator/internal/database"
+	"github.com/Nidal-Bakir/rss-aggregator/internal/utils"
 	"github.com/google/uuid"
 )
 
@@ -50,6 +52,53 @@ func (conf *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request)
 
 }
 
-func (conf *apiConfig) GetUserByApiKeyHandler(w http.ResponseWriter, r *http.Request) {
+func (conf *apiConfig) GetUserByApiKeyHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+	responseWithJson(w, 200, toUserModel(dbUser))
+}
 
+func (apiConfig *apiConfig) CreateFeedHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+	type feedParams struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+
+	var reqParams feedParams
+	err := json.NewDecoder(r.Body).Decode(&reqParams)
+	if err != nil {
+		responseWithError(w, 400, "malformed json", err)
+		return
+	}
+
+	name := strings.TrimSpace(reqParams.Name)
+	if name == "" {
+		responseWithError(w, 400, "name is required", err)
+		return
+	}
+
+	url := strings.TrimSpace(reqParams.URL)
+	if url == "" {
+		responseWithError(w, 400, "url is required", err)
+		return
+	}
+	if !utils.IsValidUrl(url) {
+		responseWithError(w, 400, "url valid", err)
+		return
+	}
+
+	dbFeed, err := apiConfig.DB.CreateFeed(r.Context(),
+		database.CreateFeedParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			Name:      name,
+			Url:       url,
+			UserID:    dbUser.ID,
+		})
+
+	if err != nil {
+		responseWithError(w, 500, "con not create the feed", err)
+		return
+	}
+
+	responseWithJson(w, 201, toFeedModel(dbFeed))
 }
