@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,4 +26,52 @@ type FollowFeedParams struct {
 func (q *Queries) FollowFeed(ctx context.Context, arg FollowFeedParams) error {
 	_, err := q.db.ExecContext(ctx, followFeed, arg.ID, arg.UserID, arg.FeedID)
 	return err
+}
+
+const getFeedFollows = `-- name: GetFeedFollows :many
+SELECT f.id,
+    f.created_at,
+    f.updated_at,
+    f.name,
+    f.url
+FROM feed_follow AS ff
+    JOIN feed As f ON f.id = ff.feed_id
+WHERE ff.user_id = $1
+`
+
+type GetFeedFollowsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Url       string
+}
+
+func (q *Queries) GetFeedFollows(ctx context.Context, userID uuid.UUID) ([]GetFeedFollowsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeedFollows, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFeedFollowsRow
+	for rows.Next() {
+		var i GetFeedFollowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
