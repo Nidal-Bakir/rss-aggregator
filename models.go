@@ -34,13 +34,6 @@ type FeedModel struct {
 	Url       string    `json:"url"`
 	UserID    uuid.UUID `json:"user_id"`
 }
-type PublicFeedModel struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Name      string    `json:"name"`
-	Url       string    `json:"url"`
-}
 
 func toFeedModel(feed database.Feed) FeedModel {
 	return FeedModel{
@@ -51,5 +44,21 @@ func toFeedModel(feed database.Feed) FeedModel {
 		Url:       feed.Url,
 		UserID:    feed.UserID,
 	}
+}
 
+type PublicFeedModel struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Name      string    `json:"name"`
+	Url       string    `json:"url"`
+}
+
+type FeedFollowsModel struct {
+	ID        uuid.UUID `json:"id"`
+	FeedId    uuid.UUID `json:"feed_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Name      string    `json:"name"`
+	Url       string    `json:"url"`
 }

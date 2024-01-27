@@ -1,0 +1,6 @@
+-- +goose Up 
+ALTER TABLE feed
+ADD COLUMN last_sync_at TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
+
+-- +goose Down
+ALTER TABLE feed DROP COLUMN last_sync_at;

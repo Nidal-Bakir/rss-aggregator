@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,7 +30,8 @@ func (q *Queries) FollowFeed(ctx context.Context, arg FollowFeedParams) error {
 }
 
 const getFeedFollows = `-- name: GetFeedFollows :many
-SELECT f.id,
+SELECT ff.id as id,
+    f.id as feed_id,
     f.created_at,
     f.updated_at,
     f.name,
@@ -41,6 +43,7 @@ WHERE ff.user_id = $1
 
 type GetFeedFollowsRow struct {
 	ID        uuid.UUID
+	FeedID    uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Name      string
@@ -58,6 +61,7 @@ func (q *Queries) GetFeedFollows(ctx context.Context, userID uuid.UUID) ([]GetFe
 		var i GetFeedFollowsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.FeedID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Name,
@@ -74,4 +78,19 @@ func (q *Queries) GetFeedFollows(ctx context.Context, userID uuid.UUID) ([]GetFe
 		return nil, err
 	}
 	return items, nil
+}
+
+const unfollowFeed = `-- name: UnfollowFeed :execresult
+DELETE FROM feed_follow
+WHERE id = $1
+    AND user_id = $2
+`
+
+type UnfollowFeedParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) UnfollowFeed(ctx context.Context, arg UnfollowFeedParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, unfollowFeed, arg.ID, arg.UserID)
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nidal-Bakir/rss-aggregator/internal/database"
 	"github.com/Nidal-Bakir/rss-aggregator/internal/utils"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -153,4 +154,63 @@ func (apiConfig *apiConfig) FollowFeedHandler(w http.ResponseWriter, r *http.Req
 	responseWithJson(w, 201, struct {
 		Message string `json:"message"`
 	}{Message: "Done!"})
+}
+
+func (apiConfig *apiConfig) FeedFollowsHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+
+	dbFeeds, err := apiConfig.DB.GetFeedFollows(r.Context(), dbUser.ID)
+
+	if err != nil {
+		responseWithError(w, 500, "Can not get the feed", err)
+		return
+	}
+
+	feedFollowsSlice := make([]FeedFollowsModel, len(dbFeeds))
+
+	for i, v := range dbFeeds {
+		feedFollowsSlice[i] = FeedFollowsModel{
+			ID:        v.ID,
+			FeedId:    v.FeedID,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
+			Name:      v.Name,
+			Url:       v.Url,
+		}
+	}
+
+	responseWithJson(w, 200, feedFollowsSlice)
+}
+
+func (apiConfig *apiConfig) UnfollowFeedHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+	strId := chi.URLParam(r, "id")
+	id, err := uuid.Parse(strId)
+	if err != nil {
+		responseWithError(w, 400, "malformed id", err)
+		return
+	}
+
+	sqlResult, err := apiConfig.DB.UnfollowFeed(r.Context(),
+		database.UnfollowFeedParams{
+			ID:     id,
+			UserID: dbUser.ID,
+		})
+	if err != nil {
+		responseWithError(w, 500, "Can not unfollow feed", err)
+		return
+	}
+
+	rowsAffected, err := sqlResult.RowsAffected()
+	if err != nil {
+		responseWithError(w, 500, "Can not unfollow feed", err)
+		return
+	}
+	if rowsAffected == 0 {
+		responseWithError(w, 404, "No feed to unfollow", err)
+		return
+	}
+
+	responseWithJson(w, 200, struct {
+		Message string `json:"message"`
+	}{Message: "Done!"})
+
 }
