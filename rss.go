@@ -13,7 +13,6 @@ type RSSFeed struct {
 
 type FeedChannel struct {
 	Title         string    `xml:"title"`
-	Link          string    `xml:"link"`
 	Description   string    `xml:"description"`
 	LastBuildDate string    `xml:"lastBuildDate"`
 	Items         []RssItem `xml:"items"`
