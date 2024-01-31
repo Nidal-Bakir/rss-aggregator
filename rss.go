@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
-	"time"
 )
 
 type RSSFeed struct {
@@ -26,8 +25,7 @@ type RssItem struct {
 	Description string `xml:"description"`
 }
 
-func FetchRssFeed(url string, rssFeed *RSSFeed) error {
-	client := http.Client{Timeout: time.Second * 10}
+func FetchRssFeed(client *http.Client, url string, rssFeed *RSSFeed) error {
 	res, err := client.Get(url)
 
 	if err != nil {

@@ -20,16 +20,24 @@ import (
 
 func startServer() {
 	readAndSetEnv(".env")
-	
+
 	port, _ := os.LookupEnv("PORT")
 	if port == "" {
 		log.Fatal("con not find the port in hte env")
 	}
 
-	apiConfig := setupDatabase()
+	db := setupDatabase()
 
+	apiConfig := apiConfig{DB: db}
 	router := setUpRouter(apiConfig)
 	server := &http.Server{Handler: router, Addr: ":" + port}
+
+	fmt.Println("Start Scraping Process")
+	go startScraper(
+		db,
+		int32(2),
+		time.Second*5,
+	)
 
 	fmt.Printf("Starting the server on %s", server.Addr)
 	err := server.ListenAndServe()
@@ -76,7 +84,7 @@ type apiConfig struct {
 	DB *database.Queries
 }
 
-func setupDatabase() apiConfig {
+func setupDatabase() *database.Queries {
 	dbUrl, _ := os.LookupEnv("DB_URL")
 	if dbUrl == "" {
 		log.Fatal("con not find the DB_URL in hte env")
@@ -88,6 +96,6 @@ func setupDatabase() apiConfig {
 		log.Fatal("can not open the database connection: ", err)
 	}
 
-	return apiConfig{DB: database.New(db)}
+	return database.New(db)
 
 }
