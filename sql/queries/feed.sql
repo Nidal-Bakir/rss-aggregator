@@ -10,3 +10,15 @@ SELECT id,
     name,
     url
 FROM feed;
+
+-- name: GetFeedsOrderedByLastSync :many
+SELECT id,
+    url
+FROM feed
+ORDER BY last_sync_at ASC OFFSET $1
+LIMIT $2;
+
+-- name: MakeFeedAsSynced :exec
+UPDATE feed
+set last_sync_at = CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+WHERE id = $1;

@@ -15,7 +15,7 @@ import (
 const createFeed = `-- name: CreateFeed :one
 INSERT INTO feed (id, created_at, updated_at, name, url, user_id)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, created_at, updated_at, name, url, user_id
+RETURNING id, created_at, updated_at, name, url, user_id, last_sync_at
 `
 
 type CreateFeedParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.Name,
 		&i.Url,
 		&i.UserID,
+		&i.LastSyncAt,
 	)
 	return i, err
 }
@@ -92,4 +93,56 @@ func (q *Queries) GetAllFeeds(ctx context.Context) ([]GetAllFeedsRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getFeedsOrderedByLastSync = `-- name: GetFeedsOrderedByLastSync :many
+SELECT id,
+    url
+FROM feed
+ORDER BY last_sync_at ASC OFFSET $1
+LIMIT $2
+`
+
+type GetFeedsOrderedByLastSyncParams struct {
+	Offset int32
+	Limit  int32
+}
+
+type GetFeedsOrderedByLastSyncRow struct {
+	ID  uuid.UUID
+	Url string
+}
+
+func (q *Queries) GetFeedsOrderedByLastSync(ctx context.Context, arg GetFeedsOrderedByLastSyncParams) ([]GetFeedsOrderedByLastSyncRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeedsOrderedByLastSync, arg.Offset, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFeedsOrderedByLastSyncRow
+	for rows.Next() {
+		var i GetFeedsOrderedByLastSyncRow
+		if err := rows.Scan(&i.ID, &i.Url); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const makeFeedAsSynced = `-- name: MakeFeedAsSynced :exec
+UPDATE feed
+set last_sync_at = CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+WHERE id = $1
+`
+
+func (q *Queries) MakeFeedAsSynced(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, makeFeedAsSynced, id)
+	return err
 }
