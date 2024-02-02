@@ -14,7 +14,7 @@ type FeedChannel struct {
 	Title         string    `xml:"title"`
 	Description   string    `xml:"description"`
 	LastBuildDate string    `xml:"lastBuildDate"`
-	Items         []RssItem `xml:"items"`
+	Items         []RssItem `xml:"item"`
 }
 
 type RssItem struct {

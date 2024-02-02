@@ -22,30 +22,23 @@ func startScraper(DB *database.Queries, concurrentRequestsCount int32, scraperIn
 
 	ticker := time.NewTicker(scraperIntervale)
 
-	var offsetTotal int32
-
 	for ; ; <-ticker.C {
 
 		feeds, err := DB.GetFeedsOrderedByLastSync(
 			context.Background(),
 			database.GetFeedsOrderedByLastSyncParams{
-				Limit:  concurrentRequestsCount,
-				Offset: offsetTotal,
+				Limit: concurrentRequestsCount,
 			},
 		)
 
-		if err != nil {
-			log.Println("Error while getting the feeds from the database for scraping:", err)
+		if err != nil || len(feeds) == 0 {
+			if err != nil {
+				log.Println("Error while getting the feeds from the database for scraping:", err)
+			} else {
+				log.Println("No Feeds to scrap, the database returned an empty slice")
+			}
 			continue
 		}
-
-		if len(feeds) == 0 {
-			log.Println("Resting the offset total to zero no rows left to query")
-			offsetTotal = 0
-			continue
-		}
-
-		offsetTotal += concurrentRequestsCount
 
 		scrapeFeeds(DB, &feeds, client)
 

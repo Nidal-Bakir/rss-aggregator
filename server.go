@@ -36,10 +36,10 @@ func startServer() {
 	go startScraper(
 		db,
 		int32(2),
-		time.Second*5,
+		time.Second*60,
 	)
 
-	fmt.Printf("Starting the server on %s", server.Addr)
+	fmt.Printf("Starting the server on %s\n", server.Addr)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalln("Error while starting the server", err)
