@@ -2,3 +2,6 @@
 
 .env
 bin/*
+
+goose_up.sh
+goose_down.sh
