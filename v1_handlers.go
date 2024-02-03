@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 
 	"strings"
 
@@ -13,10 +14,7 @@ import (
 	"github.com/Nidal-Bakir/rss-aggregator/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/gorilla/schema"
 )
-
-var schemaDecoder = schema.NewDecoder()
 
 func errEndpointHandler(w http.ResponseWriter, r *http.Request) {
 	responseWithError(w, 444, "Error you dum dum!", errors.New("error"))
@@ -220,32 +218,49 @@ func (apiConfig *apiConfig) UnfollowFeedHandler(w http.ResponseWriter, r *http.R
 }
 
 func (apiConfig *apiConfig) PostsForFollowedFeedsHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
-	type FormParams struct {
-		PerPage int `schema:"per_page"`
-		Page    int `schema:"page"`
+	params := r.URL.Query().Get
+
+	var pageSize int
+	if val, err := strconv.Atoi(params("page_size")); err == nil {
+		pageSize = val
+	}
+	pageSize = utils.Clamp(pageSize, 1, 40)
+
+	var page int
+	if val, err := strconv.Atoi(params("page")); err == nil {
+		page = val
 	}
 
-	err := r.ParseForm()
-	if err != nil {
-		responseWithError(w, 400, "malformed Form-data", err)
-		return
-	}
-
-	var formParam FormParams
-	err = schemaDecoder.Decode(&formParam, r.PostForm)
-	if err != nil {
-		responseWithError(w, 400, "malformed Form-data", err)
-		return
-	}
-	perPage := utils.Clamp(formParam.PerPage, 1, 40)
-
-	apiConfig.DB.GetPostsForFollowedFeed(
+	dbPosts, err := apiConfig.DB.GetPostsForFollowedFeed(
 		r.Context(),
 		database.GetPostsForFollowedFeedParams{
 			UserID: dbUser.ID,
-			Offset: int32(formParam.Page),
-			Limit:  int32(perPage),
+			Offset: int32(page * pageSize),
+			Limit:  int32(pageSize + 1),
 		},
 	)
+
+	if err != nil {
+		responseWithError(w, 500, "Error while gating posts", err)
+		return
+	}
+
+	publicPostsSlices := make([]PostModel, len(dbPosts))
+	for i, post := range dbPosts {
+		publicPostsSlices[i] = toPostModel(post)
+	}
+
+	type Payload struct {
+		Data        []PostModel `json:"data"`
+		CanLoadMore bool        `json:"can_load_more"`
+	}
+
+	canLoadMore := false
+	if len(publicPostsSlices) > pageSize {
+		publicPostsSlices = publicPostsSlices[:len(publicPostsSlices)-1]
+		canLoadMore = true
+	}
+
+	responseWithJson(w, 200, Payload{Data: publicPostsSlices, CanLoadMore: canLoadMore})
 
 }

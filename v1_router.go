@@ -17,6 +17,8 @@ func initV1Router(apiConfig apiConfig) (v1Router *chi.Mux) {
 
 	r.Post("/follow-feed", apiConfig.authMiddleware(apiConfig.FollowFeedHandler))
 	r.Delete("/follow-feed/{id}", apiConfig.authMiddleware(apiConfig.UnfollowFeedHandler))
+	
+	r.Get("/followed-feeds-posts", apiConfig.authMiddleware(apiConfig.PostsForFollowedFeedsHandler))
 
 	return r
 }
