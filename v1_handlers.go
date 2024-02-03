@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+
 	"strings"
 
 	"net/http"
@@ -12,7 +13,10 @@ import (
 	"github.com/Nidal-Bakir/rss-aggregator/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/gorilla/schema"
 )
+
+var schemaDecoder = schema.NewDecoder()
 
 func errEndpointHandler(w http.ResponseWriter, r *http.Request) {
 	responseWithError(w, 444, "Error you dum dum!", errors.New("error"))
@@ -212,5 +216,36 @@ func (apiConfig *apiConfig) UnfollowFeedHandler(w http.ResponseWriter, r *http.R
 	responseWithJson(w, 200, struct {
 		Message string `json:"message"`
 	}{Message: "Done!"})
+
+}
+
+func (apiConfig *apiConfig) PostsForFollowedFeedsHandler(w http.ResponseWriter, r *http.Request, dbUser database.User) {
+	type FormParams struct {
+		PerPage int `schema:"per_page"`
+		Page    int `schema:"page"`
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		responseWithError(w, 400, "malformed Form-data", err)
+		return
+	}
+
+	var formParam FormParams
+	err = schemaDecoder.Decode(&formParam, r.PostForm)
+	if err != nil {
+		responseWithError(w, 400, "malformed Form-data", err)
+		return
+	}
+	perPage := utils.Clamp(formParam.PerPage, 1, 40)
+
+	apiConfig.DB.GetPostsForFollowedFeed(
+		r.Context(),
+		database.GetPostsForFollowedFeedParams{
+			UserID: dbUser.ID,
+			Offset: int32(formParam.Page),
+			Limit:  int32(perPage),
+		},
+	)
 
 }

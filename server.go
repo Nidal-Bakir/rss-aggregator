@@ -35,7 +35,7 @@ func startServer() {
 	fmt.Println("Start Scraping Process")
 	go startScraper(
 		db,
-		int32(2),
+		int32(100),
 		time.Second*60,
 	)
 

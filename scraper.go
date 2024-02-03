@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"sync"
@@ -85,6 +86,40 @@ func updateRssFeedDataInDB(id uuid.UUID, DB *database.Queries, rssFeed *RSSFeed)
 		return
 	}
 
-	log.Printf("The Feed %s, collected and we found %d posts(items)",
+	log.Printf("The Feed %s, collected and we found %d posts(items)\n",
 		rssFeed.Channel.Title, len(rssFeed.Channel.Items))
+	for _, post := range rssFeed.Channel.Items {
+
+		pubDate := parsePubDateFromFeedPost(post.PubDate)
+
+		err := DB.CreatePost(
+			context.Background(),
+			database.CreatePostParams{
+				ID:          uuid.New(),
+				Title:       post.Title,
+				Url:         post.Link,
+				PubDate:     pubDate,
+				Description: post.Description,
+				FeedID:      id,
+			},
+		)
+
+		if err != nil {
+			log.Printf("Error storing the  post in the database %v\n", err)
+		}
+	}
+
+}
+
+func parsePubDateFromFeedPost(pubDate string) sql.NullTime {
+	parsedPubDate, err := time.Parse(time.RFC1123Z, pubDate)
+
+	if err != nil {
+		log.Printf("Error parsing the PubDate from the Feed post item, the pubDate:%s. Error:%v\n", pubDate, err)
+	}
+
+	return sql.NullTime{
+		Time:  parsedPubDate,
+		Valid: err == nil,
+	}
 }

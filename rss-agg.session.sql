@@ -1,1 +1,1 @@
-SELECT id , user_id from feed_follow;
+SELECT *  from post LIMIT 1;
